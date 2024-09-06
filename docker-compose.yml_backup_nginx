@@ -1,0 +1,47 @@
+services:
+  NPM:
+    image: jlesage/nginx-proxy-manager:latest
+    container_name: proxy-manager
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - ./opt/proxy-manager/config:/config
+    restart: 'unless-stopped'
+    networks:
+      DMZ:
+        ipv4_address: 192.168.1.250
+      RSBackend:
+        ipv4_address: 192.168.254.1
+
+  hbbs:
+    container_name: rustdesk_hbbs
+    image: rustdesk/rustdesk-server-pro:latest
+    command: hbbs -k _
+    hostname: uniquehostname   # Change This
+    volumes:
+      - ./opt/rustdeskserver:/root
+    networks:
+      RSBackend:
+        ipv4_address: 192.168.254.2
+    depends_on:
+      - hbbr
+    restart: unless-stopped
+
+  hbbr:
+    container_name: rustdesk_hbbr
+    image: rustdesk/rustdesk-server-pro:latest
+    command: hbbr -k _
+    volumes:
+      - ./opt/rustdeskserver:/root
+    networks:
+      RSBackend:
+        ipv4_address: 192.168.254.3
+    restart: unless-stopped
+
+networks:
+  DMZ:
+    external: true
+  RSBackend:
+    external: true
