@@ -1,0 +1,47 @@
+x-deploy: &default-deploy
+  restart_policy:
+    condition: unless-stopped
+    delay: 5s
+    window: 120s
+  update_config:
+    order: start-first
+
+services:
+  hbbs:
+    container_name: hbbs
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs
+    volumes:
+      - ./data:/root
+    network_mode: "host"
+    depends_on:
+      - hbbr
+    restart: unless-stopped
+
+  hbbr:
+    container_name: hbbr
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr
+    volumes:
+      - ./data:/root
+    network_mode: "host"
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db:
+  cert:
+  data:
+
+networks:
+  zero-trust-cloudflared:
+    external: true
+    name: zero-trust-cloudflared
+  web:
+    external: true
+    name: web
+  no-zero-trust-cloudflared:
+    external: true
+    driver: bridge
+    name: no-zero-trust-cloudflared
