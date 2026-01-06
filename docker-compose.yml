@@ -1,35 +1,66 @@
- networks:
-   rustdesk-net:
-     external: true
+networks:
+  rustdesk-net:
+    external: true
 
- services:
-   hbbs:
-     container_name: hbbs
-     ports:
-       - 21115:21115
-       - 21116:21116
-       - 21116:21116/udp
-       - 21118:21118
-     image: rustdesk/rustdesk-server:latest
-     command: hbbs -r rustdesk.foodshare.club:21117
-     volumes:
-       - ./data:/root
-     networks:
-       - rustdesk-net
-     depends_on:
-       - hbbr
-     restart: unless-stopped
+services:
+  hbbs:
+    container_name: hbbs
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs -r 152.53.136.84:21117 -k _
+    ports:
+      - 21115:21115
+      - 21116:21116
+      - 21116:21116/udp
+      - 21118:21118
+    volumes:
+      - ./data:/root
+    networks:
+      - rustdesk-net
+    depends_on:
+      - hbbr
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "21116"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-   hbbr:
-     container_name: hbbr
-     ports:
-       - 21117:21117
-       - 21119:21119
-     image: rustdesk/rustdesk-server:latest
-     command: hbbr
-     volumes:
-       - ./data:/root
-     networks:
-       - rustdesk-net
-     restart: unless-stopped
-
+  hbbr:
+    container_name: hbbr
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr -k _
+    ports:
+      - 21117:21117
+      - 21119:21119
+    volumes:
+      - ./data:/root
+    networks:
+      - rustdesk-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "21117"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
