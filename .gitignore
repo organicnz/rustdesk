@@ -1,4 +1,6 @@
-data
-opt
-./data
-./opt
+data/
+opt/
+.env
+LAST_DEPLOY_SUCCESS
+*.log
+.DS_Store
