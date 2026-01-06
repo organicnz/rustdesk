@@ -1,8 +1,8 @@
-name: Deploy to Server
+name: Deploy RustDesk
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:
@@ -16,23 +16,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: unnecessary
-          if_key_exists: replace
-
-      - name: Adding Known Hosts
-        run: ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      - name: Create Target Directory
-        run: ssh ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} "mkdir -p ${{ env.TARGET_DIR }}"
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Use timeout and retry for ssh-keyscan
+          for i in 1 2 3; do
+            if timeout 30 ssh-keyscan -T 20 -H "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts 2>/dev/null; then
+              echo "SSH keyscan successful on attempt $i"
+              break
+            fi
+            echo "SSH keyscan attempt $i failed, retrying..."
+            sleep 5
+          done
+          # Verify known_hosts has content
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "Warning: known_hosts is empty, adding host key manually"
+            echo "${{ secrets.SERVER_IP }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJk7NEbzt/MWzXXqfDowZkggJlqUJ7JWwR97mdtKS5e/" >> ~/.ssh/known_hosts
+          fi
 
       - name: Deploy with rsync
         run: |
           rsync -avz --exclude '.git' --exclude '.github' ./ ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ env.TARGET_DIR }}
 
-      - name: Restart Docker Compose
+      - name: Refresh RustDesk
         run: |
-          ssh ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} "cd ${{ env.TARGET_DIR }} && docker compose down && docker compose up -d"
+          ssh -o "StrictHostKeyChecking=no" -o ConnectTimeout=30 ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} /bin/bash << 'EOSS'
+            set -e
+            cd ${{ env.TARGET_DIR }}
+            
+            echo "=== Syncing repository code ==="
+            sudo chown -R organic:organic .
+            
+            echo "=== Refreshing RustDesk Containers ==="
+            # Using up -d directly is cleaner than down && up
+            docker compose up -d --remove-orphans
+            
+            echo "=== Verification ==="
+            docker compose ps
+            touch LAST_DEPLOY_SUCCESS
+            echo "Deployment finished successfully."
+          EOSS
