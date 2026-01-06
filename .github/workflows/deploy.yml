@@ -35,4 +35,4 @@ jobs:
 
       - name: Restart Docker Compose
         run: |
-          ssh ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} "cd ${{ env.TARGET_DIR }} && docker-compose down && docker-compose up -d"
+          ssh ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} "cd ${{ env.TARGET_DIR }} && docker compose down && docker compose up -d"
