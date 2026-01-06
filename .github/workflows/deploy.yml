@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  TARGET_DIR: /home/organic/dev
+  TARGET_DIR: /home/organic/dev/rustdesk
   SSH_USER: organic
 
 jobs:
@@ -30,7 +30,8 @@ jobs:
         run: ssh ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }} "mkdir -p ${{ env.TARGET_DIR }}"
 
       - name: Deploy with rsync
-        run: rsync -avz --delete --exclude '.git' --exclude '.github' ./ ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ env.TARGET_DIR }}
+        run: |
+          rsync -avz --exclude '.git' --exclude '.github' ./ ${{ env.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ env.TARGET_DIR }}
 
       - name: Restart Docker Compose
         run: |
